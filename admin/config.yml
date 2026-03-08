@@ -82,8 +82,8 @@ collections:
     fields:
       - { label: Title, name: title, widget: string }
       - { label: Description, name: description, widget: markdown }
-      - { label: Start Date, name: start_date, widget: date, dateFormat: "YYYY-MM-DD", timeFormat: false }
-      - { label: End Date, name: end_date, widget: date, dateFormat: "YYYY-MM-DD", timeFormat: false }
+      - { label: Start Date, name: start_date, widget: datetime, date_format: "YYYY-MM-DD", time_format: false }
+      - { label: End Date, name: end_date, widget: datetime, date_format: "YYYY-MM-DD", time_format: false }
       - { label: Certificate, name: certificate, widget: file, required: false }
 
   # Workshops
@@ -96,5 +96,5 @@ collections:
     fields:
       - { label: Title, name: title, widget: string }
       - { label: Description, name: description, widget: markdown }
-      - { label: Date, name: date, widget: date, dateFormat: "YYYY-MM-DD", timeFormat: false }
+      - { label: Date, name: date, widget: datetime, date_format: "YYYY-MM-DD", time_format: false }
       - { label: Certificate, name: certificate, widget: file, required: false }
