@@ -1,0 +1,76 @@
+# Decap CMS Configuration
+# 
+# IMPORTANT: Configure DecapBridge for authentication:
+# 1. Sign up at https://decapbridge.com
+# 2. Add your site and get your unique base_url
+# 3. Replace the base_url below with your DecapBridge URL
+
+backend:
+  name: git-gateway
+  base_url: https://api.decapbridge.com  # Replace with your DecapBridge URL after setup
+
+media_folder: static/images
+public_folder: /images
+
+collections:
+  # Home/Intro Page
+  - name: home
+    label: Home
+    folder: content/home
+    create: false
+    slug: intro
+    fields:
+      - { label: Name, name: name, widget: string }
+      - { label: Greeting, name: greeting, widget: string, default: "Hello, I'm {name}" }
+      - { label: Bio, name: bio, widget: markdown }
+
+  # Social Links
+  - name: socials
+    label: Socials
+    folder: content/socials
+    create: false
+    slug: index
+    fields:
+      - { label: Links, name: links, widget: list, fields: [
+          { label: Platform, name: platform, widget: string },
+          { label: URL, name: url, widget: string },
+          { label: Username, name: username, widget: string }
+        ] }
+
+  # Contact Info
+  - name: contact
+    label: Contact
+    folder: content/contact
+    create: false
+    slug: index
+    fields:
+      - { label: Email, name: email, widget: string }
+      - { label: Phone, name: phone, widget: string }
+      - { label: Additional Info, name: body, widget: markdown }
+
+  # Courses
+  - name: courses
+    label: Courses
+    folder: content/courses
+    create: true
+    delete: true
+    slug: "{{slug}}"
+    fields:
+      - { label: Title, name: title, widget: string }
+      - { label: Description, name: description, widget: markdown }
+      - { label: Start Date, name: start_date, widget: date }
+      - { label: End Date, name: end_date, widget: date }
+      - { label: Certificate, name: certificate, widget: image, required: false }
+
+  # Workshops
+  - name: workshops
+    label: Workshops
+    folder: content/workshops
+    create: true
+    delete: true
+    slug: "{{slug}}"
+    fields:
+      - { label: Title, name: title, widget: string }
+      - { label: Description, name: description, widget: markdown }
+      - { label: Date, name: date, widget: date }
+      - { label: Certificate, name: certificate, widget: image, required: false }

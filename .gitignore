@@ -1,0 +1,4 @@
+!.gitignore
+.aider*
+node_modules/
+.eslintcache
