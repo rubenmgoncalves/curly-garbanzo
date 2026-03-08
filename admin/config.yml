@@ -82,9 +82,9 @@ collections:
     fields:
       - { label: Title, name: title, widget: string }
       - { label: Description, name: description, widget: markdown }
-      - { label: Start Date, name: start_date, widget: date }
-      - { label: End Date, name: end_date, widget: date }
-      - { label: Certificate, name: certificate, widget: image, required: false }
+      - { label: Start Date, name: start_date, widget: date, dateFormat: "YYYY-MM-DD", timeFormat: false }
+      - { label: End Date, name: end_date, widget: date, dateFormat: "YYYY-MM-DD", timeFormat: false }
+      - { label: Certificate, name: certificate, widget: file, required: false }
 
   # Workshops
   - name: workshops
@@ -96,5 +96,5 @@ collections:
     fields:
       - { label: Title, name: title, widget: string }
       - { label: Description, name: description, widget: markdown }
-      - { label: Date, name: date, widget: date }
-      - { label: Certificate, name: certificate, widget: image, required: false }
+      - { label: Date, name: date, widget: date, dateFormat: "YYYY-MM-DD", timeFormat: false }
+      - { label: Certificate, name: certificate, widget: file, required: false }
