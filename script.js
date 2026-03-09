@@ -1,6 +1,9 @@
 (function() {
     'use strict';
 
+    const CONTENT_REPO = 'rubenmgoncalves/curly-garbanzo';
+    const CONTENT_BRANCH = 'main';
+
     // App data
     let appData = {
         intro: {
@@ -59,9 +62,24 @@
             return { data: {}, content: content };
         }
 
-        const frontmatterStr = match[1];
+        const frontmatterStr = match[1] || '';
         const body = match[2] || '';
 
+        // Use a real YAML parser when available (required for nested Decap CMS fields).
+        if (window.jsyaml && typeof window.jsyaml.load === 'function') {
+            try {
+                const data = window.jsyaml.load(frontmatterStr) || {};
+                return { data, content: body.trim() };
+            } catch (e) {
+                console.warn('YAML parse failed, falling back to simple parser.', e);
+            }
+        }
+
+        const data = parseFlatFrontmatter(frontmatterStr);
+        return { data, content: body.trim() };
+    }
+
+    function parseFlatFrontmatter(frontmatterStr) {
         const data = {};
         frontmatterStr.split('\n').forEach(line => {
             const colonIndex = line.indexOf(':');
@@ -78,7 +96,7 @@
             }
         });
 
-        return { data, content: body.trim() };
+        return data;
     }
 
     /**
@@ -91,9 +109,49 @@
                 return null;
             }
             return await response.text();
-        } catch (e) {
+        } catch {
             return null;
         }
+    }
+
+    async function fetchJson(path) {
+        try {
+            const response = await fetch(path);
+            if (!response.ok) {
+                return null;
+            }
+            return await response.json();
+        } catch {
+            return null;
+        }
+    }
+
+    async function listContentFiles(folderPath, fallbackFiles) {
+        // Optional local manifest support (if user adds index.json for deterministic ordering).
+        const manifest = await fetchJson(`${folderPath}/index.json`);
+        if (Array.isArray(manifest) && manifest.length > 0) {
+            return manifest.filter(file => typeof file === 'string' && file.endsWith('.md'));
+        }
+
+        // Fallback to GitHub Contents API for dynamic file discovery on static hosting.
+        const apiUrl = `https://api.github.com/repos/${CONTENT_REPO}/contents/${folderPath}?ref=${CONTENT_BRANCH}`;
+        const entries = await fetchJson(apiUrl);
+        if (Array.isArray(entries)) {
+            const files = entries
+                .filter(entry => entry && entry.type === 'file' && entry.name.endsWith('.md'))
+                .map(entry => entry.name)
+                .sort();
+            if (files.length > 0) {
+                return files;
+            }
+        }
+
+        return fallbackFiles;
+    }
+
+    function toDisplayDateRange(startDate, endDate) {
+        if (startDate && endDate) return `${startDate} - ${endDate}`;
+        return startDate || endDate || '';
     }
 
     /**
@@ -118,15 +176,18 @@
         const content = await fetchFile('content/socials/index.md');
         if (content) {
             const { data, content: body } = parseFrontmatter(content);
-            if (data.links) {
-                appData.socials = Array.isArray(data.links) ? data.links : [data.links];
+            if (Array.isArray(data.links)) {
+                appData.socials = data.links.map(link => ({
+                    label: link.platform || link.username || 'Link',
+                    url: link.url || '#'
+                }));
             }
-            if (body) {
+            if (appData.socials.length === 0 && body) {
                 // Parse links from markdown list
                 const linkMatches = body.match(/\[([^\]]+)\]\(([^)]+)\)/g);
                 if (linkMatches) {
                     appData.socials = linkMatches.map(match => {
-                        const [_, label, url] = match.match(/\[([^\]]+)\]\(([^)]+)\)/);
+                        const [, label, url] = match.match(/\[([^\]]+)\]\(([^)]+)\)/);
                         return { label, url };
                     });
                 }
@@ -153,38 +214,17 @@
      * Load courses
      */
     async function loadCourses() {
-        // For now, load from a single file
-        // In production, you'd have multiple files or an index
-        const content = await fetchFile('content/courses/index.md');
-        if (content) {
-            const lines = content.split('\n');
-            let currentEntry = null;
-            
-            lines.forEach(line => {
-                if (line.startsWith('## ')) {
-                    if (currentEntry) appData.courses.push(currentEntry);
-                    currentEntry = { title: line.replace('## ', '').trim() };
-                } else if (line.startsWith('**Description:**')) {
-                    if (currentEntry) currentEntry.description = line.replace('**Description:**', '').trim();
-                } else if (line.startsWith('**Dates:**')) {
-                    if (currentEntry) currentEntry.dates = line.replace('**Dates:**', '').trim();
-                } else if (line.startsWith('**Certificate:**')) {
-                    if (currentEntry) currentEntry.certificate = line.replace('**Certificate:**', '').trim();
-                }
-            });
-            if (currentEntry) appData.courses.push(currentEntry);
-        }
-        
-        // Alternative: Load individual course files
-        const courseFiles = ['javascript-fundamentals.md']; // This would be generated
+        appData.courses = [];
+        const courseFiles = await listContentFiles('content/courses', ['javascript-fundamentals.md']);
         for (const file of courseFiles) {
+            if (file === 'index.md') continue;
             const courseContent = await fetchFile(`content/courses/${file}`);
             if (courseContent) {
                 const { data, content: body } = parseFrontmatter(courseContent);
                 appData.courses.push({
                     title: data.title || 'Untitled Course',
                     description: body || data.description || '',
-                    dates: data.dates || '',
+                    dates: toDisplayDateRange(data.start_date, data.end_date) || data.dates || '',
                     certificate: data.certificate || ''
                 });
             }
@@ -197,15 +237,17 @@
      * Load workshops
      */
     async function loadWorkshops() {
-        const workshopFiles = []; // Would be generated from content directory
+        appData.workshops = [];
+        const workshopFiles = await listContentFiles('content/workshops', ['react-quickstart.md']);
         for (const file of workshopFiles) {
+            if (file === 'index.md') continue;
             const workshopContent = await fetchFile(`content/workshops/${file}`);
             if (workshopContent) {
                 const { data, content: body } = parseFrontmatter(workshopContent);
                 appData.workshops.push({
                     title: data.title || 'Untitled Workshop',
                     description: body || data.description || '',
-                    dates: data.dates || '',
+                    dates: data.date || data.dates || '',
                     certificate: data.certificate || ''
                 });
             }
